@@ -10,7 +10,7 @@ This is a faux volumetric light glow originally used in Doom 3. The Unity versio
 
 Updates:
 
-* Updated for modern Unity. This demo uses Unity 2021.3.15f1 (URP).
+* Updated for modern Unity. This demo was made in Unity 2021.3.15f1 (URP), but should work in any modern Unity version.
 * Glow fades out when below this distance (fadeDistanceMin)
 * Glow has a distance to achieve max opacity (fullDistance)
 * Glow fades out when exceeding this value (fadeDistanceMax)
