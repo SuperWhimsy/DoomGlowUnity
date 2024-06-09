@@ -17,8 +17,7 @@ using UnityEngine;
 // It has been optimised and uses a parent Manager class to call the Update Mesh method if it is visible
 // The original Unity version relied on Screen Space conversions which didn't work well with VR
 
-// 2024 Update by Josh Farkas / SuperWhimsy
-// Revisions:
+// 2024 Update by Super Whimsy
 // * Works with latest Unity versions
 // * Glow fades out when below this distance (fadeDistanceMin)
 // * Glow has a distance to achieve max opacity (fullDistance)
