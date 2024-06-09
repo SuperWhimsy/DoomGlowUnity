@@ -6,6 +6,8 @@ This file is in the public domain. Where a public domain declaration is not reco
 
 This is a faux volumetric light glow originally used in Doom 3. The Unity version (by Sean 'sh0v0r' Edwards) is based on the Unreal port of this effect (by Tim Sabo). New features by Super Whimsy.
 
+![alt text](https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExaWE2bzA2M3M5MnBmMGd6cHJtb2J1cTgxaGdhMGR6eGc1NXQycDV0NCZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/eBTqYoBE4AU77siExH/giphy.gif "DoomGlowUnity")
+
 Updates:
 
 * Updated for modern Unity. This demo uses Unity 2021.3.15f1 (URP).
