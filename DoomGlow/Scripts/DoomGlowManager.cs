@@ -13,13 +13,13 @@ public class DoomGlowManager : MonoBehaviour
     }
 
     private void LateUpdate()
-    {        
+    {
         foreach (DoomGlow dg in glows)
         {
             if (alwaysUpdate || dg.meshRenderer.isVisible)
             {
-                dg.UpdateMeshVR();        
+                dg.UpdateMeshVR();
             }
-        }        
+        }
     }
 }

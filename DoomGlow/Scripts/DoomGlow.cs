@@ -17,6 +17,14 @@ using UnityEngine;
 // It has been optimised and uses a parent Manager class to call the Update Mesh method if it is visible
 // The original Unity version relied on Screen Space conversions which didn't work well with VR
 
+// 2024 Update by Josh Farkas / SuperWhimsy
+// Revisions:
+// * Works with latest Unity versions
+// * Glow fades out when below this distance (fadeDistanceMin)
+// * Glow has a distance to achieve max opacity (fullDistance)
+// * Glow fades out when exceeding this value (fadeDistanceMax)
+// * Glow can now optionally follow dynamic objects (vehicles, enemies) with objectToFollow field
+
 public class DoomGlow : MonoBehaviour
 {
     public float quadSize = 1.0f;
@@ -26,12 +34,16 @@ public class DoomGlow : MonoBehaviour
     public bool showBack = true;
     public bool showQuad = true;
     public bool showBounds = false;
+    public Transform objectToFollow;
+    public float fadeDistanceMin = 1f;
+    public float fullDistance = 4f;
+    public float fadeDistanceMax = 6f;
 
-    public MeshRenderer meshRenderer;       
-    
+    public MeshRenderer meshRenderer;
+
     MeshFilter meshFilter;
     Mesh mesh;
-    
+
     public Camera mainCamera;
     public Transform mainCameraXForm;
     Transform xForm;
@@ -39,7 +51,7 @@ public class DoomGlow : MonoBehaviour
     Color colorFilled;
     Color colorEdge;
     Vector3 quadNormal;
-    
+
     int[] indexBuffer;
     int[] indexBufferFull;
     Vector3[] quadPoints = new Vector3[4];
@@ -52,25 +64,25 @@ public class DoomGlow : MonoBehaviour
         xForm = transform;
         if (mainCameraXForm == null)
         {
-            mainCameraXForm = GameManager.instance.playerEyeXForm;
+            // Camera not found! Please assign it manually in the inspector.
         }
         mainCamera = mainCameraXForm.GetComponent<Camera>();
         meshRenderer = GetComponent<MeshRenderer>();
-        
+
         colorFilled = quadColor;
         colorEdge = edgeColor;
         colorEdge.a = 0;
-        
-        indexBufferFull =  new int[] {
+
+        indexBufferFull = new int[] {
         0,1,2, 0,2,3, // Quad
 		0,5,7, 0,7,1, 1,8,10, 1,10,2, 2,11,13, 2,13,3, 3,14,4, 3,4,0, // Flaps
 		0,4,6, 0,6,5, 1,7,9, 1,9,8, 2,10,12, 2,12,11, 3,13,15, 3,15,14}; // Connections
-            
-        indexBuffer = new int [] {
+
+        indexBuffer = new int[] {
         0,5,7, 0,7,1, 1,8,10, 1,10,2, 2,11,13, 2,13,3, 3,14,4, 3,4,0, // Flaps
 		0,4,6, 0,6,5, 1,7,9, 1,9,8, 2,10,12, 2,12,11, 3,13,15, 3,15,14}; // Connections
     }
-        
+
 
     void Start()
     {
@@ -80,15 +92,16 @@ public class DoomGlow : MonoBehaviour
             return;
         }
 
-        meshFilter = GetComponent<MeshFilter>();       
+        meshFilter = GetComponent<MeshFilter>();
 
         UpdateQuadPoints();
 
         mesh = new Mesh();
         meshFilter.mesh = mesh;
-                               
+
         // get normal of quad        
-        quadNormal = -xForm.forward;                
+        quadNormal = -xForm.forward;
+
     }
 
     void UpdateQuadPoints()
@@ -131,17 +144,37 @@ public class DoomGlow : MonoBehaviour
     bool boundsRecalculated = false;
     public void UpdateMeshVR()
     {
+        float distanceToCamera = Vector3.Distance(mainCameraXForm.position, transform.position);
+        float alpha = 0f;
+
+        if (distanceToCamera <= fadeDistanceMin || distanceToCamera >= fadeDistanceMax)
+        {
+            alpha = 0f;
+        }
+        else if (distanceToCamera <= fullDistance)
+        {
+            // lerp alpha from 0 to 1 as we move from fadeDistanceMin to fullDistance
+            alpha = Mathf.InverseLerp(fadeDistanceMin, fullDistance, distanceToCamera);
+        }
+        else
+        {
+            // lerp alpha from 1 to 0 as we move from fullDistance to fadeDistanceMax
+            alpha = Mathf.InverseLerp(fadeDistanceMax, fullDistance, distanceToCamera);
+        }
+
+        quadColor.a = alpha;
+
 #if UNITY_EDITOR
-        quadNormal = -xForm.forward;
+    quadNormal = -xForm.forward;
 #endif
         Vector3 cameraLocalPosition = xForm.InverseTransformPoint(mainCameraXForm.position);
         Vector3 directionToCenter = (xForm.position - mainCameraXForm.position).normalized;
-        
+
         dot = Vector3.Dot(directionToCenter, quadNormal);
 
         sign = Mathf.Sign(dot);
 
-        float alpha = LinearMap(Mathf.Abs(dot), 0.001f, 0.1f, 0.0f, 1.0f);
+        alpha = LinearMap(Mathf.Abs(dot), 0.001f, 0.1f, 0.0f, 1.0f);
 
         for (int i = 0; i < 4; ++i)
         {
@@ -152,19 +185,19 @@ public class DoomGlow : MonoBehaviour
         {
             // Just flip the quad
             //Swap(ref vertexBuffer[1], ref vertexBuffer[3]);
-            sign = -1;            
+            sign = -1;
         }
-        
+
         for (int i = 0; i < 4; i++)
-        {                    
-            eyeToPoint_WS[i] = xForm.TransformVector((vertexBuffer[i] - cameraLocalPosition)).normalized;            
-        }        
+        {
+            eyeToPoint_WS[i] = xForm.TransformVector((vertexBuffer[i] - cameraLocalPosition)).normalized;
+        }
 
         // extrude quad vertices
         for (int i = 0; i < 4; i++)
-        {            
+        {
             pushDirWS[0] = sign * Vector3.Cross(eyeToPoint_WS[i], eyeToPoint_WS[(i + 3) % 4]).normalized;
-            pushDirWS[1] = sign * Vector3.Cross(eyeToPoint_WS[(i+1)%4], eyeToPoint_WS[i]).normalized;
+            pushDirWS[1] = sign * Vector3.Cross(eyeToPoint_WS[(i + 1) % 4], eyeToPoint_WS[i]).normalized;
             pushDirWS[2] = (pushDirWS[0] + pushDirWS[1]).normalized;
 
             for (int j = 0; j < 3; j++)
@@ -177,12 +210,12 @@ public class DoomGlow : MonoBehaviour
 
         // update colours
 #if UNITY_EDITOR
-        colorFilled = quadColor;
-#endif        
+    colorFilled = quadColor;
+#endif
         colorFilled.a = (alpha * quadColor.a);
 #if UNITY_EDITOR
-        colorEdge = edgeColor;
-        colorEdge.a = 0;
+    colorEdge = edgeColor;
+    colorEdge.a = 0;
 #endif
         // set base colour
         for (int i = 0; i < 4; i++)
@@ -199,13 +232,21 @@ public class DoomGlow : MonoBehaviour
         // fill mesh
         mesh.vertices = vertexBuffer;
         mesh.colors = colorBuffer;
-        mesh.triangles = (showQuad)?indexBufferFull:indexBuffer;
+        mesh.triangles = (showQuad) ? indexBufferFull : indexBuffer;
         meshFilter.mesh = mesh;
 
         if (!boundsRecalculated) // only should need to do this once
         {
             mesh.RecalculateBounds(UnityEngine.Rendering.MeshUpdateFlags.Default);
             boundsRecalculated = true;
+        }
+    }
+
+    void LateUpdate()
+    {
+        if (objectToFollow != null)
+        {
+            transform.position = objectToFollow.position;
         }
     }
 
